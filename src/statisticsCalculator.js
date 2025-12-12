@@ -31,8 +31,26 @@ export const calculateStatistics = (tripData, distanceUnit = 'km') => {
   let totalPayloadUtilization = 0;
   let totalTripsCount = 0;
   let totalTrucks = 0;
+  
+  // Track unique unit combinations and their status
+  const unitCombinationStatus = new Map(); // Map to track if each unit has any planned trips
 
-  // Main loop through all trip data
+  // First pass: Identify all unit combinations and determine their status
+  for (let i = 0; i < tripData.length; i++) {
+    const trip = tripData[i];
+    const unitCombinationId = trip.unitCombination?.id || trip.unitCombination?.uid || `unknown_${i}`;
+    const tripLoadAndOrders = trip.tripEvents?.tripLoadAndOrders || [];
+    
+    // If this unit combination has trips, mark it as planned
+    if (tripLoadAndOrders.length > 0) {
+      unitCombinationStatus.set(unitCombinationId, 'planned');
+    } else if (!unitCombinationStatus.has(unitCombinationId)) {
+      // Only mark as unplanned if we haven't seen it before
+      unitCombinationStatus.set(unitCombinationId, 'unplanned');
+    }
+  }
+
+  // Main loop through all trip data for calculations
   for (let i = 0; i < tripData.length; i++) {
     const trip = tripData[i];
     totalTrucks++;
@@ -45,7 +63,6 @@ export const calculateStatistics = (tripData, distanceUnit = 'km') => {
     const tripLoadAndOrders = trip.tripEvents?.tripLoadAndOrders || [];
     
     if (tripLoadAndOrders.length > 0) {
-      stats.plannedTrucks++;
       
       // Loop through each trip load and order
       for (let j = 0; j < tripLoadAndOrders.length; j++) {
@@ -99,10 +116,23 @@ export const calculateStatistics = (tripData, distanceUnit = 'km') => {
           stats.unplannedMustGos++;
         }
       }
-    } else {
-      stats.unPlannedTrucks++;
     }
   }
+
+  // Count planned and unplanned trucks based on final status
+  let plannedCount = 0;
+  let unplannedCount = 0;
+  
+  for (const [unitId, status] of unitCombinationStatus) {
+    if (status === 'planned') {
+      plannedCount++;
+    } else {
+      unplannedCount++;
+    }
+  }
+  
+  stats.plannedTrucks = plannedCount;
+  stats.unPlannedTrucks = unplannedCount;
 
   // Calculate derived statistics
   stats.totalVolume = stats.totalVolumeVMI + stats.totalVolumeNonVMI;

@@ -27,14 +27,52 @@ export const generateCalculationExplanation = (tripData, statistics, distanceUni
   let totalTrips = 0;
   let totalOrders = 0;
   let preplannedOrdersCount = 0;
+  
+  // Track unique unit combinations and their status
+  const unitCombinationStatus = new Map();
 
-  explanation += "Iterating through each trip record:\n";
+  explanation += "PHASE 1: First pass to determine unit combination status (planned takes priority):\n";
+  
+  // First pass: Identify all unit combinations and determine their status
+  for (let i = 0; i < tripData.length; i++) {
+    const trip = tripData[i];
+    const unitCombinationId = trip.unitCombination?.id || trip.unitCombination?.uid || `unknown_${i}`;
+    const tripLoadAndOrders = trip.tripEvents?.tripLoadAndOrders || [];
+    
+    explanation += `Trip ${i + 1}: Unit ${unitCombinationId} - `;
+    
+    // If this unit combination has trips, mark it as planned
+    if (tripLoadAndOrders.length > 0) {
+      const previousStatus = unitCombinationStatus.get(unitCombinationId);
+      unitCombinationStatus.set(unitCombinationId, 'planned');
+      if (previousStatus === 'unplanned') {
+        explanation += `Changed from UNPLANNED to PLANNED (has ${tripLoadAndOrders.length} trip loads)\n`;
+      } else if (previousStatus === 'planned') {
+        explanation += `Already PLANNED (has ${tripLoadAndOrders.length} trip loads)\n`;
+      } else {
+        explanation += `Set to PLANNED (has ${tripLoadAndOrders.length} trip loads)\n`;
+      }
+    } else if (!unitCombinationStatus.has(unitCombinationId)) {
+      // Only mark as unplanned if we haven't seen it before
+      unitCombinationStatus.set(unitCombinationId, 'unplanned');
+      explanation += `Set to UNPLANNED (no trip loads)\n`;
+    } else {
+      explanation += `Remains ${unitCombinationStatus.get(unitCombinationId).toUpperCase()} (no trip loads)\n`;
+    }
+  }
+
+  explanation += `\nPHASE 2: Processing trip details for calculations:\n`;
   
   for (let i = 0; i < tripData.length; i++) {
     const trip = tripData[i];
     const tripLoadAndOrders = trip.tripEvents?.tripLoadAndOrders || [];
     
+    // Get unit combination ID for tracking unique vehicles
+    const unitCombinationId = trip.unitCombination?.id || trip.unitCombination?.uid || `unknown_${i}`;
+    
     explanation += `\nTrip ${i + 1}:\n`;
+    explanation += `  - Unit Combination ID: ${unitCombinationId}\n`;
+    explanation += `  - Final Status: ${unitCombinationStatus.get(unitCombinationId).toUpperCase()}\n`;
     explanation += `  - Shift Duration: ${trip.shiftDurationInMinute || 0} minutes\n`;
     explanation += `  - Shift Used Duration: ${trip.shiftUsedDurationInMinute || 0} minutes\n`;
     explanation += `  - Number of trip loads: ${tripLoadAndOrders.length}\n`;
@@ -42,8 +80,6 @@ export const generateCalculationExplanation = (tripData, statistics, distanceUni
     totalShiftTime += trip.shiftDurationInMinute || 0;
     
     if (tripLoadAndOrders.length > 0) {
-      plannedTrucksCount++;
-      explanation += `  → Classified as PLANNED TRUCK\n`;
       
       for (let j = 0; j < tripLoadAndOrders.length; j++) {
         const tripLoadOrder = tripLoadAndOrders[j];
@@ -72,15 +108,32 @@ export const generateCalculationExplanation = (tripData, statistics, distanceUni
           preplannedOrdersCount += orders.length;
         }
       }
-    } else {
-      unplannedTrucksCount++;
-      explanation += `  → Classified as UNPLANNED TRUCK\n`;
     }
   }
 
-  explanation += `\nCOUNTING RESULTS:\n`;
-  explanation += `- Planned Trucks = ${plannedTrucksCount}\n`;
-  explanation += `- Unplanned Trucks = ${unplannedTrucksCount}\n`;
+  // Count final status
+  let plannedCount = 0;
+  let unplannedCount = 0;
+  const plannedUnits = [];
+  const unplannedUnits = [];
+  
+  for (const [unitId, status] of unitCombinationStatus) {
+    if (status === 'planned') {
+      plannedCount++;
+      plannedUnits.push(unitId);
+    } else {
+      unplannedCount++;
+      unplannedUnits.push(unitId);
+    }
+  }
+
+  explanation += `\nUNIQUE VEHICLE COUNTING SUMMARY:\n`;
+  explanation += `- Unique Planned Unit Combinations: ${plannedCount} (${plannedUnits.join(', ')})\n`;
+  explanation += `- Unique Unplanned Unit Combinations: ${unplannedCount} (${unplannedUnits.join(', ')})\n\n`;
+
+  explanation += `COUNTING RESULTS:\n`;
+  explanation += `- Planned Trucks = ${plannedCount} (unique vehicles with at least one trip)\n`;
+  explanation += `- Unplanned Trucks = ${unplannedCount} (unique vehicles with no trips)\n`;
   explanation += `- Total Trips = ${totalTrips}\n`;
   explanation += `- Total Orders = ${totalOrders}\n`;
   explanation += `- Preplanned Orders = ${preplannedOrdersCount}\n\n`;
