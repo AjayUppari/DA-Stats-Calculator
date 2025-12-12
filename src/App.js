@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { calculateStatistics } from './statisticsCalculator';
 import { generateCalculationExplanation } from './calculationExplainer';
 import { sampleTripData } from './sampleData';
+import { formatValue, getDistanceUnitLabel, getDistancePerVolumeLabel } from './utils';
 
 const App = () => {
   const [jsonInput, setJsonInput] = useState('');
@@ -11,6 +12,7 @@ const App = () => {
   const [showExplanation, setShowExplanation] = useState(false);
   const [explanation, setExplanation] = useState('');
   const [copyStatus, setCopyStatus] = useState('Copy');
+  const [distanceUnit, setDistanceUnit] = useState('km');
 
   const handleCalculate = () => {
     setError('');
@@ -27,8 +29,8 @@ const App = () => {
         throw new Error('Input must be an array of trip data');
       }
       
-      const calculatedStats = calculateStatistics(tripData);
-      const calculationExplanation = generateCalculationExplanation(tripData, calculatedStats);
+      const calculatedStats = calculateStatistics(tripData, distanceUnit);
+      const calculationExplanation = generateCalculationExplanation(tripData, calculatedStats, distanceUnit);
       
       setStatistics(calculatedStats);
       setExplanation(calculationExplanation);
@@ -71,25 +73,10 @@ const App = () => {
     setStatistics(null);
   };
 
-  const formatValue = (value, type = 'number') => {
-    if (value === null || value === undefined) return 'N/A';
-    
-    switch (type) {
-      case 'percentage':
-        return `${Number(value).toFixed(2)}%`;
-      case 'decimal':
-        return Number(value).toFixed(2);
-      case 'integer':
-        return Math.round(Number(value)).toLocaleString();
-      default:
-        return Number(value).toLocaleString();
-    }
-  };
-
   const StatCard = ({ label, value, type = 'number' }) => (
     <div className="stat-card">
       <div className="stat-label">{label}</div>
-      <div className="stat-value">{formatValue(value, type)}</div>
+      <div className="stat-value">{formatValue(value, type, distanceUnit)}</div>
     </div>
   );
 
@@ -110,6 +97,18 @@ const App = () => {
 
       <div className="input-section">
         <h3>JSON Input</h3>
+        <div className="unit-selection">
+          <label htmlFor="distance-unit">Distance Unit:</label>
+          <select 
+            id="distance-unit"
+            value={distanceUnit} 
+            onChange={(e) => setDistanceUnit(e.target.value)}
+            className="unit-select"
+          >
+            <option value="km">Kilometers (km)</option>
+            <option value="miles">Miles</option>
+          </select>
+        </div>
         <textarea
           className="textarea"
           value={jsonInput}
@@ -196,9 +195,9 @@ const App = () => {
               type="percentage"
             />
             <StatCard 
-              label="Average Unplanned Time per Truck (min)" 
+              label="Average Unplanned Time per Truck" 
               value={statistics.averageUnplannedTimePerTruck} 
-              type="decimal"
+              type="time"
             />
             <StatCard 
               label="Average Number of Drops" 
@@ -206,29 +205,29 @@ const App = () => {
               type="decimal"
             />
             <StatCard 
-              label="Total Used Time (min)" 
+              label="Total Used Time" 
               value={statistics.totalUsedTime} 
-              type="integer"
+              type="time"
             />
             <StatCard 
               label="Delay" 
               value={statistics.delay} 
-              type="integer"
+              type="time"
             />
             <StatCard 
-              label="Total Used km" 
+              label={`Total Used ${getDistanceUnitLabel(distanceUnit)}`}
               value={statistics.totalUsedKMs} 
-              type="integer"
+              type="distance"
             />
             <StatCard 
-              label="Way Back km" 
+              label={`Way Back ${getDistanceUnitLabel(distanceUnit)}`}
               value={statistics.wayBackKm} 
-              type="integer"
+              type="distance"
             />
             <StatCard 
-              label="km/m³" 
+              label={getDistancePerVolumeLabel(distanceUnit)}
               value={statistics.kmPerM3} 
-              type="decimal"
+              type="distance-decimal"
             />
             <StatCard 
               label="m³/hour" 

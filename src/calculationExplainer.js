@@ -1,8 +1,13 @@
 // Function to generate detailed mathematical calculation explanations
 
-export const generateCalculationExplanation = (tripData, statistics) => {
+import { formatDistance, getDistanceUnitLabel, getDistancePerVolumeLabel, formatTimeToHoursMinutes } from './utils';
+
+export const generateCalculationExplanation = (tripData, statistics, distanceUnit = 'km') => {
   let explanation = "DETAILED MATHEMATICAL CALCULATION EXPLANATION\n";
   explanation += "=" .repeat(60) + "\n\n";
+  
+  const distanceLabel = getDistanceUnitLabel(distanceUnit);
+  const distancePerVolumeLabel = getDistancePerVolumeLabel(distanceUnit);
 
   // Variables for intermediate calculations
   let totalShiftTime = 0;
@@ -45,9 +50,12 @@ export const generateCalculationExplanation = (tripData, statistics) => {
         totalTrips++;
         totalTripsCount++;
         
+        const totalDistance = formatDistance(tripLoadOrder.totalKM || 0, distanceUnit);
+        const customerDistance = formatDistance(tripLoadOrder.customerToUBORLPDistanceKM || 0, distanceUnit);
+        
         explanation += `    Trip Load ${j + 1}:\n`;
-        explanation += `      - Total KM: ${tripLoadOrder.totalKM || 0}\n`;
-        explanation += `      - Customer to UB/LP Distance: ${tripLoadOrder.customerToUBORLPDistanceKM || 0} km\n`;
+        explanation += `      - Total Distance: ${totalDistance.toFixed(1)} ${distanceLabel}\n`;
+        explanation += `      - Customer to UB/LP Distance: ${customerDistance.toFixed(1)} ${distanceLabel}\n`;
         explanation += `      - Is Preplanned: ${tripLoadOrder.isPreplanned}\n`;
         explanation += `      - Number of orders: ${tripLoadOrder.orders?.length || 0}\n`;
         
@@ -150,10 +158,13 @@ export const generateCalculationExplanation = (tripData, statistics) => {
     }
   }
   
-  explanation += `Total Used Time = Sum of all shiftUsedDurationInMinute = ${totalUsedTime} minutes\n`;
-  explanation += `Total Shift Time = Sum of all shiftDurationInMinute = ${totalShiftTime} minutes\n`;
-  explanation += `Total Used KMs = Sum of all totalKM = ${totalUsedKMs} km\n`;
-  explanation += `Way Back KM = Sum of all customerToUBORLPDistanceKM = ${wayBackKm} km\n\n`;
+  const totalUsedDistance = formatDistance(totalUsedKMs, distanceUnit);
+  const totalWayBackDistance = formatDistance(wayBackKm, distanceUnit);
+  
+  explanation += `Total Used Time = Sum of all shiftUsedDurationInMinute = ${totalUsedTime} minutes (${formatTimeToHoursMinutes(totalUsedTime)})\n`;
+  explanation += `Total Shift Time = Sum of all shiftDurationInMinute = ${totalShiftTime} minutes (${formatTimeToHoursMinutes(totalShiftTime)})\n`;
+  explanation += `Total Used Distance = Sum of all totalKM = ${totalUsedKMs} km = ${totalUsedDistance.toFixed(1)} ${distanceLabel}\n`;
+  explanation += `Way Back Distance = Sum of all customerToUBORLPDistanceKM = ${wayBackKm} km = ${totalWayBackDistance.toFixed(1)} ${distanceLabel}\n\n`;
 
   // Step 4: Average Calculations
   explanation += "STEP 4: AVERAGE AND DERIVED CALCULATIONS\n";
@@ -176,10 +187,13 @@ export const generateCalculationExplanation = (tripData, statistics) => {
   explanation += `= ${totalOrders} / ${totalTrips} = ${statistics.averageNumberOfDrops.toFixed(2)}\n\n`;
   
   const totalVolumeM3 = (vmiVolume + nonVmiVolume) / 1000;
-  explanation += `km/m³ Calculation:\n`;
-  explanation += `= Total Used KMs / Total Volume in m³\n`;
-  explanation += `= ${totalUsedKMs} / (${vmiVolume + nonVmiVolume} / 1000)\n`;
-  explanation += `= ${totalUsedKMs} / ${totalVolumeM3.toFixed(3)} = ${statistics.kmPerM3.toFixed(2)} km/m³\n\n`;
+  const convertedDistanceForCalc = formatDistance(totalUsedKMs, distanceUnit);
+  const convertedKmPerM3 = formatDistance(statistics.kmPerM3, distanceUnit);
+  
+  explanation += `${distancePerVolumeLabel} Calculation:\n`;
+  explanation += `= Total Used Distance / Total Volume in m³\n`;
+  explanation += `= ${totalUsedKMs} km (${convertedDistanceForCalc.toFixed(1)} ${distanceLabel}) / (${vmiVolume + nonVmiVolume} / 1000)\n`;
+  explanation += `= ${convertedDistanceForCalc.toFixed(1)} / ${totalVolumeM3.toFixed(3)} = ${convertedKmPerM3.toFixed(2)} ${distancePerVolumeLabel}\n\n`;
   
   const totalUsedTimeHours = totalUsedTime / 60;
   explanation += `m³/hour Calculation:\n`;
@@ -202,13 +216,13 @@ export const generateCalculationExplanation = (tripData, statistics) => {
   explanation += `Unplanned Non-VMI Volume: ${statistics.unplannedNonVMIVolume}L\n`;
   explanation += `Average Payload Utilization: ${statistics.averagePayloadUtilization.toFixed(2)}%\n`;
   explanation += `Average Shift Utilization: ${statistics.averageShiftUtilization.toFixed(2)}%\n`;
-  explanation += `Average Unplanned Time per Truck: ${statistics.averageUnplannedTimePerTruck.toFixed(2)} minutes\n`;
+  explanation += `Average Unplanned Time per Truck: ${formatTimeToHoursMinutes(statistics.averageUnplannedTimePerTruck)}\n`;
   explanation += `Average Number of Drops: ${statistics.averageNumberOfDrops.toFixed(2)}\n`;
-  explanation += `Total Used Time: ${statistics.totalUsedTime} minutes\n`;
-  explanation += `Delay: ${statistics.delay}\n`;
-  explanation += `Total Used km: ${statistics.totalUsedKMs} km\n`;
-  explanation += `Way Back km: ${statistics.wayBackKm} km\n`;
-  explanation += `km/m³: ${statistics.kmPerM3.toFixed(2)}\n`;
+  explanation += `Total Used Time: ${formatTimeToHoursMinutes(statistics.totalUsedTime)}\n`;
+  explanation += `Delay: ${formatTimeToHoursMinutes(statistics.delay)}\n`;
+  explanation += `Total Used Distance: ${formatDistance(statistics.totalUsedKMs, distanceUnit).toFixed(1)} ${distanceLabel}\n`;
+  explanation += `Way Back Distance: ${formatDistance(statistics.wayBackKm, distanceUnit).toFixed(1)} ${distanceLabel}\n`;
+  explanation += `${distancePerVolumeLabel}: ${formatDistance(statistics.kmPerM3, distanceUnit).toFixed(2)}\n`;
   explanation += `m³/hour: ${statistics.m3PerHour.toFixed(2)}\n`;
 
   return explanation;

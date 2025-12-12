@@ -1,7 +1,7 @@
 // Statistics Calculator Functions based on the provided TypeScript code
 // Implementing loop-based logic to iterate through all objects in JSON
 
-export const calculateStatistics = (tripData) => {
+export const calculateStatistics = (tripData, distanceUnit = 'km') => {
   // Initialize statistics object
   const stats = {
     plannedTrucks: 0,

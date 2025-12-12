@@ -211,3 +211,41 @@ code {
 .toggle-explanation-button:hover {
   background-color: #138496;
 }
+
+.unit-selection {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 15px;
+  padding: 10px;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+  border: 1px solid #e9ecef;
+}
+
+.unit-selection label {
+  font-weight: bold;
+  color: #495057;
+  margin: 0;
+}
+
+.unit-select {
+  padding: 8px 12px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  background-color: white;
+  color: #495057;
+  font-size: 14px;
+  cursor: pointer;
+  min-width: 150px;
+}
+
+.unit-select:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+.unit-select:hover {
+  border-color: #adb5bd;
+}
